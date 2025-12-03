@@ -26,7 +26,7 @@ End_of_Usage
 my ($help, $algo, $memory, $nthread, $outdir, $paired, $vc, $path_prefix);
 
 GetOptions("h|help"        => \$help,
-	   "path-prefix=s" => \$path_prefix,
+       "path-prefix=s" => \$path_prefix,
            "a|algo=s"      => \$algo,
            "m|memory=s"    => \$memory,
            "o|outdir=s"    => \$outdir,
@@ -49,15 +49,15 @@ $read2 = other_read_file_in_pair($read1) if $paired;
 
 print "READS = $read1 $read2\n";
 if ($read1 && $read1 =~ /\.gz$/ && $algo eq 'LAST') {
-	print "gunzip $read1\n";
-	run("gunzip $read1");
-	$read1 =  substr($read1, 0, -3);
+    print "gunzip $read1\n";
+    run("gunzip $read1");
+    $read1 =  substr($read1, 0, -3);
 }
 
 if ($read2 && $read2 =~ /\.gz$/ && $algo eq 'LAST') {
-	print "gunzip $read2\n";
-	run("gunzip $read2");
-	$read2 =  substr($read2, 0, -3);
+    print "gunzip $read2\n";
+    run("gunzip $read2");
+    $read2 =  substr($read2, 0, -3);
 }
 
 $nthread ||= 8;
@@ -78,16 +78,16 @@ if (eval "defined(&map_with_$algo)") {
     if ($@) {
         print $@;
     } else {
-        compute_stats();
+        compute_stats() unless $algo eq "snippy";
         if ($vc && eval "defined(&call_variant_with_$vc)") {
             eval "&call_variant_with_$vc";
             print $@ if $@;
             compute_consensus() unless $@;
         }
-	else
-	{
-	    die "No variant calling code available for $vc\n";
-	}
+    else
+    {
+        die "No variant calling code available for $vc\n";
+    }
         summarize() unless -s "summary.txt";
     }
 } else {
@@ -124,6 +124,10 @@ sub call_variant_with_freebayes {
     -s "var.fb.q1.vcf"  or run("vcffilter -f 'QUAL > 1' var.fb.vcf > var.fb.q1.vcf");
     -s "var.fb.count"   or run("grep -v '^#' var.fb.vcf |cut -f4 |grep -v 'N' |wc -l > var.fb.count");
     -s "var.vcf"        or run("ln -s -f var.fb.q10.vcf var.vcf");
+}
+
+sub call_variant_with_snippy {
+    -s "var.vcf"        or run("ln -s -f snippy_out/snps.vcf var.vcf");
 }
 
 sub compute_consensus {
@@ -370,6 +374,25 @@ sub map_with_minimap2_se {
     -s "aln.dedup.bam"  or run("samtools rmdup aln.sorted.bam aln.dedup.bam");  # rmdup broken in samtools v1.0 and v1.1
     -s "aln.bam"        or run("ln -s -f aln.dedup.bam aln.bam");
     -s "aln.bam.bai"    or run("samtools index aln.bam aln.bam.bai");
+}
+
+sub map_with_snippy {
+    verify_cmd(qw(snippy));
+    -s "ref.fa"         or run_symlink($ref, "ref.fa");
+    -s "read_1.fq"      or run_symlink($read1, "read_1.fq");
+    -s "read_2.fq"      or run_symlink($read2, "read_2.fq");
+    -s "snps.vcf"       or run("snippy --cpus $nthread --outdir snippy_out --ref ref.fa --R1 read_1.fq --R2 read_2.fq");
+    -s "aln.bam"        or run("ln -s -f snippy_out/snps.bam aln.bam");
+    -s "aln.bam.bai"    or run("ln -s -f snippy_out/snps.bam.bai aln.bam.bai");
+}
+
+sub map_with_snippy_se {
+    verify_cmd(qw(snippy));
+    -s "ref.fa"         or run_symlink($ref, "ref.fa");
+    -s "read.fq"        or run_symlink($read1, "read.fq");
+    -s "snps.vcf"       or run("snippy --cpus $nthread --outdir snippy_out --cleanup --ref ref.fa --R1 read.fq");
+    -s "aln.bam"        or run("ln -s -f snippy_out/snps.bam aln.bam");
+    -s "aln.bam.bai"    or run("ln -s -f snippy_out/snps.bam.bai aln.bam.bai");
 }
 
 sub summarize {

@@ -107,7 +107,8 @@
         "Bowtie2",
         "MOSAIK",
         "LAST",
-        "minimap2"
+        "minimap2",
+        "Snippy"
       ]
     },
     {
@@ -119,7 +120,8 @@
       "type": "enum",
       "enum": [
         "FreeBayes",
-        "BCFtools"
+        "BCFtools",
+        "Snippy"
       ]
     },
     {

@@ -113,6 +113,7 @@ sub process_variation_data {
     system("samtools", "--version") == 0 or die "samtools --version failed";
     system("bcftools", "--version") == 0 or die "bcftools --version failed";
     system("freebayes", "--version") == 0 or die "freebayes --version failed";
+    system("snippy", "--version") == 0 or die "snippy --version failed";
 
     #
     # Redirect tmp to large NFS if more than 4 input files.
